@@ -9,6 +9,43 @@ const nextConfig = {
   },
   reactStrictMode: true,
   swcMinify: true,
+  webpack(config, { isServer, webpack }) {
+    // Fix browserslist dynamic require.resolve issues
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+      }
+    }
+    
+    // Always alias browserslist to browser version to avoid Node.js specific code
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "browserslist$": "browserslist/browser",
+      "browserslist/node": "browserslist/browser",
+    }
+
+    // Ignore all dynamic requires that cause issues with browserslist
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        checkResource(resource, context) {
+          // Ignore any browserslist-stats.json files
+          if (resource.includes('browserslist-stats.json')) {
+            return true
+          }
+          // Ignore dynamic requires in browserslist
+          if (context && context.includes('browserslist') && resource.includes('stats')) {
+            return true
+          }
+          return false
+        }
+      })
+    )
+    
+    return config
+  },
   images: {
     remotePatterns: [
       {
