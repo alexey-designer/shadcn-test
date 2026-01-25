@@ -14,6 +14,10 @@ export const siteConfig = {
       label: "Docs",
     },
     {
+      href: "/ru-docs",
+      label: "RU Docs",
+    },
+    {
       href: "/docs/components",
       label: "Components",
     },

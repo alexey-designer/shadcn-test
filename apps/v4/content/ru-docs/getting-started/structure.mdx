@@ -1,0 +1,345 @@
+---
+title: Структура файлов
+description: Полное руководство по файлам и папкам для создания дизайн системы на базе shadcn + Base UI
+---
+
+# Структура файлов для дизайн системы
+
+Это руководство поможет вам понять, какие файлы и папки нужны для создания своей дизайн системы на базе **shadcn/ui** и **Base UI**, а какие можно игнорировать.
+
+---
+
+## Обязательные файлы
+
+### 1. Компоненты Base UI
+
+```
+apps/v4/registry/bases/base/
+├── ui/                          # 53 базовых компонента
+│   ├── accordion.tsx
+│   ├── alert.tsx
+│   ├── alert-dialog.tsx
+│   ├── aspect-ratio.tsx
+│   ├── avatar.tsx
+│   ├── badge.tsx
+│   ├── breadcrumb.tsx
+│   ├── button.tsx               # Основной компонент кнопки
+│   ├── button-group.tsx
+│   ├── calendar.tsx
+│   ├── card.tsx
+│   ├── carousel.tsx
+│   ├── chart.tsx
+│   ├── checkbox.tsx
+│   ├── collapsible.tsx
+│   ├── combobox.tsx
+│   ├── command.tsx
+│   ├── context-menu.tsx
+│   ├── dialog.tsx
+│   ├── drawer.tsx
+│   ├── dropdown-menu.tsx
+│   ├── empty.tsx
+│   ├── field.tsx
+│   ├── form.tsx
+│   ├── hover-card.tsx
+│   ├── input.tsx
+│   ├── input-group.tsx
+│   ├── input-otp.tsx
+│   ├── item.tsx
+│   ├── kbd.tsx
+│   ├── label.tsx
+│   ├── menubar.tsx
+│   ├── native-select.tsx
+│   ├── navigation-menu.tsx
+│   ├── pagination.tsx
+│   ├── popover.tsx
+│   ├── progress.tsx
+│   ├── radio-group.tsx
+│   ├── resizable.tsx
+│   ├── scroll-area.tsx
+│   ├── select.tsx
+│   ├── separator.tsx
+│   ├── sheet.tsx
+│   ├── sidebar.tsx
+│   ├── skeleton.tsx
+│   ├── slider.tsx
+│   ├── sonner.tsx
+│   ├── spinner.tsx
+│   ├── switch.tsx
+│   ├── table.tsx
+│   ├── tabs.tsx
+│   ├── textarea.tsx
+│   ├── toggle.tsx
+│   ├── toggle-group.tsx
+│   └── tooltip.tsx
+├── lib/
+│   └── utils.ts                 # Функция cn() для объединения классов
+├── hooks/                       # React хуки
+└── internal/                    # Внутренние компоненты
+```
+
+**Зачем нужно:** Это ядро вашей дизайн системы - готовые компоненты с Base UI.
+
+---
+
+### 2. CSS Стили
+
+```
+apps/v4/registry/styles/
+├── style-nova.css              # Рекомендуемый стиль для начала
+├── style-vega.css              # Альтернативный стиль
+├── style-maia.css              # Альтернативный стиль
+├── style-lyra.css              # Альтернативный стиль
+└── style-mira.css              # Альтернативный стиль
+
+apps/v4/styles/
+└── globals.css                 # Глобальные стили и CSS переменные
+```
+
+**Зачем нужно:** CSS файлы определяют внешний вид всех компонентов - цвета, размеры, границы, анимации.
+
+**Пример содержимого style-nova.css:**
+
+```css
+/* Стили для кнопки */
+.cn-button {
+  @apply focus-visible:border-ring focus-visible:ring-ring/50
+         rounded-lg border border-transparent bg-clip-padding
+         text-sm font-medium focus-visible:ring-[3px];
+}
+
+.cn-button-variant-default {
+  @apply bg-primary text-primary-foreground hover:bg-primary/80;
+}
+
+.cn-button-size-default {
+  @apply h-8 gap-1.5 px-2.5;
+}
+```
+
+---
+
+### 3. Конфигурационные файлы
+
+```
+apps/v4/
+├── components.json             # Главный конфиг shadcn CLI
+├── tsconfig.json               # TypeScript с path алиасами
+├── tailwind.config.ts          # Конфигурация Tailwind CSS
+├── postcss.config.mjs          # PostCSS конфиг
+└── package.json                # Зависимости проекта
+
+apps/v4/registry/
+├── config.ts                   # Конфиг дизайн-системы (bases, styles, themes)
+├── bases.ts                    # Определение base наборов
+├── themes.ts                   # Определение тем
+├── fonts.ts                    # Определение шрифтов
+└── base-colors.ts              # Цветовая палитра
+```
+
+**Зачем нужно:** Эти файлы определяют структуру и настройки вашей дизайн системы.
+
+---
+
+### 4. Утилиты
+
+```
+apps/v4/registry/bases/base/lib/
+└── utils.ts                    # Функция cn() - критически важна!
+```
+
+**Содержимое utils.ts:**
+
+```typescript
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
+
+**Зачем нужно:** Функция `cn()` используется во ВСЕХ компонентах для объединения CSS классов.
+
+---
+
+## Опциональные файлы
+
+### 5. Иконки
+
+```
+apps/v4/registry/icons/
+├── __lucide__.ts               # Lucide Icons (рекомендуется)
+├── __tabler__.ts               # Tabler Icons
+├── __phosphor__.ts             # Phosphor Icons
+├── __remixicon__.ts            # Remix Icons
+└── __hugeicons__.ts            # Huge Icons
+```
+
+**Зачем нужно:** Поддержка разных иконочных библиотек. Выберите одну для своего проекта.
+
+---
+
+### 6. Хуки
+
+```
+apps/v4/hooks/
+├── use-layout.tsx
+├── use-mobile.tsx
+├── use-theme.tsx
+├── use-media-query.tsx
+└── ... (10+ хуков)
+```
+
+**Зачем нужно:** Переиспользуемые React хуки для работы с темами, размерами экрана и т.д.
+
+---
+
+### 7. Примеры использования
+
+```
+apps/v4/registry/bases/base/examples/
+├── button-demo.tsx
+├── input-demo.tsx
+└── ... (61 пример)
+```
+
+**Зачем нужно:** Примеры показывают как правильно использовать компоненты. Полезно для документации.
+
+---
+
+## Файлы которые можно игнорировать
+
+### Deprecated код
+
+```
+deprecated/
+├── cli/                        # Старая версия CLI
+└── www/                        # Старый веб-сайт
+```
+
+**Причина:** Устаревший код, не нужен для новой дизайн системы.
+
+---
+
+### Radix UI версия (если используете Base UI)
+
+```
+apps/v4/registry/bases/radix/
+└── ... (53 компонента на Radix UI)
+```
+
+**Причина:** Альтернативная реализация на Radix UI. Выберите только одну версию.
+
+---
+
+### New York стиль
+
+```
+apps/v4/registry/new-york-v4/
+├── ui/                         # 53 компонента
+├── blocks/                     # 68 блоков
+├── charts/                     # 73 графика
+└── examples/                   # 237 примеров
+```
+
+**Причина:** Альтернативный дизайн стиль. Можно изучить позже для вдохновения.
+
+---
+
+### App Router страницы (документация сайта)
+
+```
+apps/v4/app/
+├── (app)/                      # Страницы документации
+├── (examples)/                 # Страницы примеров
+└── (view)/                     # Страницы просмотра
+```
+
+**Причина:** Это документация и демо сайт shadcn, не нужно для вашей дизайн системы.
+
+---
+
+### Скрипты сборки
+
+```
+apps/v4/scripts/
+├── build-registry.mts
+├── build-icons.ts
+└── build-examples.ts
+```
+
+**Причина:** Скрипты для генерации регистра компонентов shadcn. Вам не нужно их запускать.
+
+---
+
+### Пакеты монорепо
+
+```
+packages/
+├── shadcn/                     # CLI инструмент
+└── tests/                      # Тесты
+
+templates/                      # Шаблоны проектов
+```
+
+**Причина:** Это для разработки самого shadcn CLI, не для вашей дизайн системы.
+
+---
+
+## Рекомендуемая структура для вашей дизайн системы
+
+```
+your-design-system/
+├── components/
+│   ├── ui/                     # Скопировать из registry/bases/base/ui/
+│   │   ├── button.tsx
+│   │   ├── input.tsx
+│   │   └── ...
+│   ├── lib/
+│   │   └── utils.ts            # Функция cn()
+│   ├── hooks/
+│   └── internal/
+│
+├── styles/
+│   ├── globals.css             # Глобальные стили
+│   └── theme.css               # Один из style-*.css файлов
+│
+├── config/
+│   ├── components.json
+│   ├── themes.ts
+│   ├── colors.ts
+│   └── fonts.ts
+│
+├── icons/
+│   └── __lucide__.ts           # Выбранная библиотека иконок
+│
+└── examples/                   # Примеры (опционально)
+    └── button-demo.tsx
+```
+
+---
+
+## Ключевые зависимости
+
+```json
+{
+  "dependencies": {
+    "@base-ui/react": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0",
+    "tailwindcss": "^4.1.0"
+  }
+}
+```
+
+---
+
+## Следующие шаги
+
+1. **Скопируйте базовые файлы** из `registry/bases/base/`
+2. **Выберите стиль** из `registry/styles/` (рекомендуется `style-nova.css`)
+3. **Настройте конфигурацию** под свой проект
+4. **Кастомизируйте компоненты** по необходимости
+
+Подробнее о кастомизации компонентов читайте в разделе [Компоненты](/ru-docs/components).

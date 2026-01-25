@@ -37,3 +37,7 @@ export const docs = defineDocs({
   //   }),
   // },
 })
+
+export const ruDocs = defineDocs({
+  dir: "content/ru-docs",
+})

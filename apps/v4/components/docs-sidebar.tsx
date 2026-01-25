@@ -54,8 +54,12 @@ const EXCLUDED_PAGES = ["/docs", "/docs/changelog"]
 
 export function DocsSidebar({
   tree,
+  showTopLevelSections = true,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { tree: typeof source.pageTree }) {
+}: React.ComponentProps<typeof Sidebar> & {
+  tree: typeof source.pageTree
+  showTopLevelSections?: boolean
+}) {
   const pathname = usePathname()
   const currentBase = getCurrentBase(pathname)
 
@@ -67,38 +71,40 @@ export function DocsSidebar({
     >
       <SidebarContent className="no-scrollbar overflow-x-hidden px-2">
         <div className="from-background via-background/80 to-background/50 sticky -top-1 z-10 h-8 shrink-0 bg-gradient-to-b blur-xs" />
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-muted-foreground font-medium">
-            Sections
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {TOP_LEVEL_SECTIONS.map(({ name, href }) => {
-                if (!showMcpDocs && href.includes("/mcp")) {
-                  return null
-                }
-                return (
-                  <SidebarMenuItem key={name}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={
-                        href === "/docs"
-                          ? pathname === href
-                          : pathname.startsWith(href)
-                      }
-                      className="data-[active=true]:bg-accent data-[active=true]:border-accent 3xl:fixed:w-full 3xl:fixed:max-w-48 relative h-[30px] w-fit overflow-visible border border-transparent text-[0.8rem] font-medium after:absolute after:inset-x-0 after:-inset-y-1 after:z-0 after:rounded-md"
-                    >
-                      <Link href={href}>
-                        <span className="absolute inset-0 flex w-(--sidebar-width) bg-transparent" />
-                        {name}
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {showTopLevelSections && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-muted-foreground font-medium">
+              Sections
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {TOP_LEVEL_SECTIONS.map(({ name, href }) => {
+                  if (!showMcpDocs && href.includes("/mcp")) {
+                    return null
+                  }
+                  return (
+                    <SidebarMenuItem key={name}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={
+                          href === "/docs"
+                            ? pathname === href
+                            : pathname.startsWith(href)
+                        }
+                        className="data-[active=true]:bg-accent data-[active=true]:border-accent 3xl:fixed:w-full 3xl:fixed:max-w-48 relative h-[30px] w-fit overflow-visible border border-transparent text-[0.8rem] font-medium after:absolute after:inset-x-0 after:-inset-y-1 after:z-0 after:rounded-md"
+                      >
+                        <Link href={href}>
+                          <span className="absolute inset-0 flex w-(--sidebar-width) bg-transparent" />
+                          {name}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {tree.children.map((item) => {
           if (EXCLUDED_SECTIONS.includes(item.$id ?? "")) {
             return null

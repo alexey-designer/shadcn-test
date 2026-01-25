@@ -1,0 +1,358 @@
+---
+title: Контекстные переменные
+description: Как добавить свой слой семантических CSS переменных поверх shadcn/ui
+---
+
+# Контекстные переменные
+
+Эта статья объясняет, как добавить свои семантические (контекстные) CSS переменные поверх существующей системы shadcn/ui, сохранив возможность теминга.
+
+---
+
+## Текущая архитектура shadcn
+
+shadcn использует трёхуровневую систему:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Уровень 3: Tailwind классы                         │
+│  bg-primary, text-muted-foreground, border-border   │
+├─────────────────────────────────────────────────────┤
+│  Уровень 2: Tailwind mapping (@theme inline)        │
+│  --color-primary: var(--primary)                    │
+├─────────────────────────────────────────────────────┤
+│  Уровень 1: CSS переменные shadcn                   │
+│  --primary: oklch(0.205 0 0)                        │
+└─────────────────────────────────────────────────────┘
+```
+
+### Уровень 1: Базовые переменные
+
+Определяются в `:root` и `.dark`:
+
+```css
+:root {
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  /* ... */
+}
+
+.dark {
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  /* ... */
+}
+```
+
+### Уровень 2: Tailwind mapping
+
+В `globals.css` в блоке `@theme inline`:
+
+```css
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  /* ... */
+}
+```
+
+### Уровень 3: Использование в компонентах
+
+```tsx
+<Button className="bg-primary text-primary-foreground" />
+```
+
+---
+
+## Добавление контекстных переменных
+
+### Рекомендуемый подход: Отдельный слой
+
+Создаём **четвёртый уровень** — контекстные переменные, которые ссылаются на базовые:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Уровень 4: Ваши контекстные классы                 │
+│  bg-fill-brand, text-content-secondary              │
+├─────────────────────────────────────────────────────┤
+│  Уровень 3.5: Ваши контекстные переменные           │
+│  --fill-brand: var(--primary)                       │
+├─────────────────────────────────────────────────────┤
+│  Уровень 3: Tailwind классы shadcn                  │
+│  bg-primary, text-muted-foreground                  │
+├─────────────────────────────────────────────────────┤
+│  ... остальные уровни без изменений ...             │
+└─────────────────────────────────────────────────────┘
+```
+
+### Шаг 1: Создайте файл с контекстными переменными
+
+Создайте файл `styles/semantic.css`:
+
+```css
+/* styles/semantic.css */
+
+/* ========================================
+   КОНТЕКСТНЫЕ ПЕРЕМЕННЫЕ (Semantic Tokens)
+   ======================================== */
+
+:root {
+  /* === FILL (фоны) === */
+  --fill-brand: var(--primary);
+  --fill-brand-hover: var(--primary);
+  --fill-brand-subtle: var(--accent);
+
+  --fill-surface: var(--background);
+  --fill-surface-raised: var(--card);
+  --fill-surface-overlay: var(--popover);
+
+  --fill-muted: var(--muted);
+  --fill-muted-hover: var(--accent);
+
+  --fill-destructive: var(--destructive);
+  --fill-destructive-subtle: oklch(from var(--destructive) l c h / 10%);
+
+  /* === CONTENT (текст и иконки) === */
+  --content-primary: var(--foreground);
+  --content-secondary: var(--muted-foreground);
+  --content-tertiary: oklch(from var(--muted-foreground) l c h / 60%);
+
+  --content-brand: var(--primary);
+  --content-on-brand: var(--primary-foreground);
+
+  --content-destructive: var(--destructive);
+  --content-on-destructive: var(--destructive-foreground);
+
+  /* === BORDER (границы) === */
+  --stroke-default: var(--border);
+  --stroke-muted: oklch(from var(--border) l c h / 50%);
+  --stroke-focus: var(--ring);
+  --stroke-brand: var(--primary);
+  --stroke-destructive: var(--destructive);
+
+  /* === INTERACTIVE (интерактивные состояния) === */
+  --interactive-hover: oklch(from var(--foreground) l c h / 5%);
+  --interactive-active: oklch(from var(--foreground) l c h / 10%);
+  --interactive-disabled: var(--muted);
+}
+
+/* Тёмная тема — переопределения при необходимости */
+.dark {
+  --fill-destructive-subtle: oklch(from var(--destructive) l c h / 15%);
+  --content-tertiary: oklch(from var(--muted-foreground) l c h / 50%);
+  --stroke-muted: oklch(from var(--border) l c h / 30%);
+}
+```
+
+### Шаг 2: Зарегистрируйте в Tailwind
+
+Добавьте в `globals.css` в блок `@theme inline`:
+
+```css
+@theme inline {
+  /* Существующие переменные shadcn... */
+  --color-primary: var(--primary);
+  /* ... */
+
+  /* Ваши контекстные переменные */
+  --color-fill-brand: var(--fill-brand);
+  --color-fill-brand-hover: var(--fill-brand-hover);
+  --color-fill-brand-subtle: var(--fill-brand-subtle);
+  --color-fill-surface: var(--fill-surface);
+  --color-fill-surface-raised: var(--fill-surface-raised);
+  --color-fill-surface-overlay: var(--fill-surface-overlay);
+  --color-fill-muted: var(--fill-muted);
+  --color-fill-muted-hover: var(--fill-muted-hover);
+  --color-fill-destructive: var(--fill-destructive);
+  --color-fill-destructive-subtle: var(--fill-destructive-subtle);
+
+  --color-content-primary: var(--content-primary);
+  --color-content-secondary: var(--content-secondary);
+  --color-content-tertiary: var(--content-tertiary);
+  --color-content-brand: var(--content-brand);
+  --color-content-on-brand: var(--content-on-brand);
+  --color-content-destructive: var(--content-destructive);
+  --color-content-on-destructive: var(--content-on-destructive);
+
+  --color-stroke-default: var(--stroke-default);
+  --color-stroke-muted: var(--stroke-muted);
+  --color-stroke-focus: var(--stroke-focus);
+  --color-stroke-brand: var(--stroke-brand);
+  --color-stroke-destructive: var(--stroke-destructive);
+
+  --color-interactive-hover: var(--interactive-hover);
+  --color-interactive-active: var(--interactive-active);
+  --color-interactive-disabled: var(--interactive-disabled);
+}
+```
+
+### Шаг 3: Импортируйте файл
+
+В `globals.css` добавьте импорт:
+
+```css
+@import "tailwindcss";
+@import "./semantic.css";  /* Ваши контекстные переменные */
+@import "shadcn/tailwind.css";
+/* ... остальные импорты */
+```
+
+### Шаг 4: Используйте в компонентах
+
+Теперь можно использовать контекстные классы:
+
+```tsx
+// Вместо:
+<div className="bg-primary text-primary-foreground">
+
+// Используйте:
+<div className="bg-fill-brand text-content-on-brand">
+```
+
+```tsx
+// Примеры использования
+<Card className="bg-fill-surface-raised border-stroke-default">
+  <h2 className="text-content-primary">Заголовок</h2>
+  <p className="text-content-secondary">Описание</p>
+  <span className="text-content-tertiary">Мета-информация</span>
+</Card>
+
+<Button className="bg-fill-brand hover:bg-fill-brand-hover text-content-on-brand">
+  Действие
+</Button>
+
+<Alert className="bg-fill-destructive-subtle border-stroke-destructive">
+  <p className="text-content-destructive">Ошибка</p>
+</Alert>
+```
+
+---
+
+## Теминг
+
+### Как это работает
+
+Теминг продолжает работать через базовые переменные shadcn:
+
+```
+Тема "amber"
+    ↓
+--primary: oklch(0.8 0.15 85)  ← меняется
+    ↓
+--fill-brand: var(--primary)   ← ссылается
+    ↓
+bg-fill-brand                   ← автоматически обновляется
+```
+
+### Создание темы с контекстными переменными
+
+Если нужно переопределить контекстные переменные для конкретной темы:
+
+```css
+/* themes/theme-ocean.css */
+.theme-ocean {
+  /* Базовые переменные */
+  --primary: oklch(0.6 0.15 230);
+  --primary-foreground: oklch(0.98 0 0);
+
+  /* Контекстные переопределения (опционально) */
+  --fill-brand-subtle: oklch(0.95 0.03 230);
+}
+
+.dark .theme-ocean {
+  --primary: oklch(0.7 0.12 230);
+  --fill-brand-subtle: oklch(0.25 0.05 230);
+}
+```
+
+---
+
+## Соглашения об именовании
+
+### Рекомендуемая структура
+
+```
+--{категория}-{назначение}-{состояние}
+```
+
+| Категория | Назначение | Примеры |
+|-----------|------------|---------|
+| `fill` | Фоны | `fill-brand`, `fill-surface`, `fill-muted` |
+| `content` | Текст, иконки | `content-primary`, `content-secondary` |
+| `stroke` | Границы | `stroke-default`, `stroke-focus` |
+| `interactive` | Состояния | `interactive-hover`, `interactive-active` |
+
+### Состояния
+
+- Без суффикса — дефолтное состояние
+- `-hover` — при наведении
+- `-active` — при нажатии
+- `-disabled` — отключённое
+- `-subtle` — менее насыщенный вариант
+
+---
+
+## Полный пример
+
+### semantic.css
+
+```css
+:root {
+  /* Fill */
+  --fill-brand: var(--primary);
+  --fill-brand-hover: oklch(from var(--primary) calc(l - 0.05) c h);
+  --fill-brand-subtle: oklch(from var(--primary) 0.95 0.02 h);
+  --fill-surface: var(--background);
+  --fill-surface-raised: var(--card);
+  --fill-muted: var(--muted);
+
+  /* Content */
+  --content-primary: var(--foreground);
+  --content-secondary: var(--muted-foreground);
+  --content-brand: var(--primary);
+  --content-on-brand: var(--primary-foreground);
+
+  /* Stroke */
+  --stroke-default: var(--border);
+  --stroke-focus: var(--ring);
+  --stroke-brand: var(--primary);
+}
+
+.dark {
+  --fill-brand-hover: oklch(from var(--primary) calc(l + 0.05) c h);
+  --fill-brand-subtle: oklch(from var(--primary) 0.2 0.03 h);
+}
+```
+
+### Использование в Button
+
+```tsx
+// components/ui/button.tsx
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md font-medium transition-colors",
+  {
+    variants: {
+      variant: {
+        default: "bg-fill-brand text-content-on-brand hover:bg-fill-brand-hover",
+        secondary: "bg-fill-muted text-content-primary hover:bg-fill-muted-hover",
+        outline: "border border-stroke-default bg-fill-surface hover:bg-fill-muted",
+        ghost: "hover:bg-fill-muted",
+      },
+    },
+  }
+)
+```
+
+---
+
+## Преимущества подхода
+
+1. **Независимость** — не меняет существующие переменные shadcn
+2. **Теминг работает** — через базовые переменные
+3. **Семантичность** — `bg-fill-brand` понятнее чем `bg-primary`
+4. **Гибкость** — можно переопределять на уровне темы
+5. **Совместимость** — можно использовать оба подхода параллельно
