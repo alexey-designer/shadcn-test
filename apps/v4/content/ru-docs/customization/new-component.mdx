@@ -1,0 +1,469 @@
+---
+title: Создание нового компонента
+description: Пошаговое руководство по созданию компонента с нуля на примере Chat Message
+---
+
+# Создание нового компонента с нуля
+
+В этой статье мы создадим компонент **Chat Message** для интерфейсов чата, следуя паттернам shadcn/ui и Base UI.
+
+---
+
+## Что входит в компонент
+
+Каждый компонент состоит из двух частей:
+
+1. **TSX файл** — логика и структура компонента
+   Путь: `registry/bases/base/ui/chat-message.tsx`
+
+2. **CSS стили** — оформление и варианты
+   Путь: `registry/styles/style-nova.css`
+
+---
+
+## Шаг 1: Планирование структуры
+
+Перед написанием кода определим:
+
+### Подкомпоненты
+
+| Компонент | Назначение |
+|-----------|------------|
+| `ChatMessage` | Контейнер сообщения |
+| `ChatMessageAvatar` | Аватар отправителя |
+| `ChatMessageContent` | Текст сообщения |
+| `ChatMessageTimestamp` | Время отправки |
+| `ChatMessageActions` | Действия (ответить, копировать) |
+
+### Варианты (variants)
+
+```typescript
+variant: "sent" | "received"  // Отправленное или полученное
+status: "sending" | "sent" | "delivered" | "read" | "error"  // Статус доставки
+```
+
+### data-slot имена
+
+```
+data-slot="chat-message"
+data-slot="chat-message-avatar"
+data-slot="chat-message-content"
+data-slot="chat-message-timestamp"
+data-slot="chat-message-actions"
+```
+
+---
+
+## Шаг 2: Создание файла компонента
+
+Создайте файл `registry/bases/base/ui/chat-message.tsx`:
+
+```tsx
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/registry/bases/base/lib/utils"
+
+// ============================================
+// ВАРИАНТЫ СТИЛЕЙ (CVA)
+// ============================================
+
+const chatMessageVariants = cva(
+  // Базовые классы — применяются всегда
+  "cn-chat-message group/chat-message flex gap-2 max-w-[80%]",
+  {
+    variants: {
+      variant: {
+        received: "cn-chat-message-variant-received self-start",
+        sent: "cn-chat-message-variant-sent self-end flex-row-reverse",
+      },
+      status: {
+        sending: "cn-chat-message-status-sending opacity-70",
+        sent: "cn-chat-message-status-sent",
+        delivered: "cn-chat-message-status-delivered",
+        read: "cn-chat-message-status-read",
+        error: "cn-chat-message-status-error",
+      },
+    },
+    defaultVariants: {
+      variant: "received",
+      status: "sent",
+    },
+  }
+)
+
+// ============================================
+// ТИПЫ
+// ============================================
+
+type ChatMessageVariants = VariantProps<typeof chatMessageVariants>
+
+interface ChatMessageProps
+  extends React.ComponentProps<"div">,
+    ChatMessageVariants {}
+
+// ============================================
+// КОМПОНЕНТЫ
+// ============================================
+
+function ChatMessage({
+  className,
+  variant,
+  status,
+  ...props
+}: ChatMessageProps) {
+  return (
+    <div
+      data-slot="chat-message"
+      data-variant={variant}
+      data-status={status}
+      className={cn(chatMessageVariants({ variant, status, className }))}
+      {...props}
+    />
+  )
+}
+
+function ChatMessageAvatar({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="chat-message-avatar"
+      className={cn(
+        "cn-chat-message-avatar size-8 shrink-0 rounded-full overflow-hidden",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function ChatMessageContent({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="chat-message-content"
+      className={cn("cn-chat-message-content rounded-2xl px-3 py-2", className)}
+      {...props}
+    />
+  )
+}
+
+function ChatMessageTimestamp({
+  className,
+  ...props
+}: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="chat-message-timestamp"
+      className={cn(
+        "cn-chat-message-timestamp text-xs text-muted-foreground",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+function ChatMessageActions({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="chat-message-actions"
+      className={cn(
+        "cn-chat-message-actions flex items-center gap-1 opacity-0 group-hover/chat-message:opacity-100 transition-opacity",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+// ============================================
+// ЭКСПОРТ
+// ============================================
+
+export {
+  ChatMessage,
+  ChatMessageAvatar,
+  ChatMessageContent,
+  ChatMessageTimestamp,
+  ChatMessageActions,
+  chatMessageVariants,
+}
+```
+
+### Разбор кода
+
+#### 1. Импорты
+
+```tsx
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/registry/bases/base/lib/utils"
+```
+
+- `cva` — для определения вариантов стилей
+- `VariantProps` — для типизации пропсов вариантов
+- `cn` — утилита для объединения классов
+
+#### 2. CVA для вариантов
+
+```tsx
+const chatMessageVariants = cva(
+  "cn-chat-message group/chat-message flex gap-2 max-w-[80%]",  // Базовые классы
+  {
+    variants: {
+      variant: {
+        received: "cn-chat-message-variant-received self-start",
+        sent: "cn-chat-message-variant-sent self-end flex-row-reverse",
+      },
+      // ...
+    },
+    defaultVariants: {
+      variant: "received",
+    },
+  }
+)
+```
+
+#### 3. data-slot атрибуты
+
+Каждый компонент имеет `data-slot` для:
+- CSS селекторов в файле стилей
+- Поиска элементов в тестах
+- Отладки в DevTools
+
+#### 4. group/chat-message
+
+```tsx
+className="group/chat-message ..."
+```
+
+Позволяет использовать `group-hover/chat-message:` для дочерних элементов.
+
+---
+
+## Шаг 3: Добавление стилей
+
+Добавьте в `registry/styles/style-nova.css`:
+
+```css
+.style-nova {
+  /* ================================
+     MARK: Chat Message
+     ================================ */
+
+  .cn-chat-message {
+    @apply relative;
+  }
+
+  /* Варианты */
+  .cn-chat-message-variant-received .cn-chat-message-content {
+    @apply bg-muted text-foreground;
+  }
+
+  .cn-chat-message-variant-sent .cn-chat-message-content {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  /* Аватар */
+  .cn-chat-message-avatar {
+    @apply bg-muted;
+  }
+
+  .cn-chat-message-avatar img {
+    @apply size-full object-cover;
+  }
+
+  /* Контент */
+  .cn-chat-message-content {
+    @apply text-sm leading-relaxed;
+  }
+
+  /* Скругление для группы сообщений */
+  .cn-chat-message-variant-received .cn-chat-message-content {
+    @apply rounded-tl-sm;
+  }
+
+  .cn-chat-message-variant-sent .cn-chat-message-content {
+    @apply rounded-tr-sm;
+  }
+
+  /* Статусы */
+  .cn-chat-message-status-sending {
+    @apply animate-pulse;
+  }
+
+  .cn-chat-message-status-error .cn-chat-message-content {
+    @apply ring-2 ring-destructive/20;
+  }
+
+  /* Временная метка */
+  .cn-chat-message-timestamp {
+    @apply mt-1 px-1;
+  }
+
+  /* Действия */
+  .cn-chat-message-actions {
+    @apply absolute -top-2 right-0;
+  }
+
+  .cn-chat-message-variant-received .cn-chat-message-actions {
+    @apply left-10 right-auto;
+  }
+}
+```
+
+### Разбор стилей
+
+#### Использование data-variant в CSS
+
+```css
+/* Через классы cn-* */
+.cn-chat-message-variant-received .cn-chat-message-content {
+  @apply bg-muted;
+}
+
+/* Или через data-атрибуты */
+.cn-chat-message[data-variant="sent"] .cn-chat-message-content {
+  @apply bg-primary;
+}
+```
+
+#### Группа сообщений
+
+Используем `:has()` для стилизации на основе соседних элементов:
+
+```css
+/* Если следующее сообщение от того же отправителя */
+.cn-chat-message:has(+ .cn-chat-message[data-variant="received"])
+  .cn-chat-message-avatar {
+  @apply invisible;
+}
+```
+
+---
+
+## Шаг 4: Использование компонента
+
+### Базовый пример
+
+```tsx
+import {
+  ChatMessage,
+  ChatMessageAvatar,
+  ChatMessageContent,
+  ChatMessageTimestamp,
+} from "@/registry/bases/base/ui/chat-message"
+
+function ChatExample() {
+  return (
+    <div className="flex flex-col gap-2 p-4">
+      {/* Полученное сообщение */}
+      <ChatMessage variant="received">
+        <ChatMessageAvatar>
+          <img src="/avatars/user.jpg" alt="User" />
+        </ChatMessageAvatar>
+        <div>
+          <ChatMessageContent>
+            Привет! Как дела?
+          </ChatMessageContent>
+          <ChatMessageTimestamp>12:30</ChatMessageTimestamp>
+        </div>
+      </ChatMessage>
+
+      {/* Отправленное сообщение */}
+      <ChatMessage variant="sent">
+        <div>
+          <ChatMessageContent>
+            Привет! Всё отлично, спасибо!
+          </ChatMessageContent>
+          <ChatMessageTimestamp>12:31</ChatMessageTimestamp>
+        </div>
+      </ChatMessage>
+
+      {/* Отправляется... */}
+      <ChatMessage variant="sent" status="sending">
+        <div>
+          <ChatMessageContent>
+            Сейчас работаю над новым проектом...
+          </ChatMessageContent>
+        </div>
+      </ChatMessage>
+    </div>
+  )
+}
+```
+
+### С действиями
+
+```tsx
+import { Button } from "@/registry/bases/base/ui/button"
+
+<ChatMessage variant="received">
+  <ChatMessageAvatar>
+    <img src="/avatars/user.jpg" alt="User" />
+  </ChatMessageAvatar>
+  <div className="relative">
+    <ChatMessageContent>
+      Посмотри этот код, что думаешь?
+    </ChatMessageContent>
+    <ChatMessageActions>
+      <Button variant="ghost" size="icon-xs">
+        <ReplyIcon className="size-3" />
+      </Button>
+      <Button variant="ghost" size="icon-xs">
+        <CopyIcon className="size-3" />
+      </Button>
+    </ChatMessageActions>
+  </div>
+</ChatMessage>
+```
+
+---
+
+## Шаг 5: Добавление в экспорт (опционально)
+
+Если хотите добавить компонент в registry, обновите `registry/bases/base/ui/index.ts`:
+
+```tsx
+export * from "./chat-message"
+```
+
+---
+
+## Чеклист
+
+При создании нового компонента убедитесь, что:
+
+- [ ] Файл компонента создан в `registry/bases/base/ui/`
+- [ ] Используется `cn()` для объединения классов
+- [ ] Добавлены `data-slot` атрибуты
+- [ ] Варианты определены через CVA (если нужны)
+- [ ] Стили добавлены в `registry/styles/style-*.css`
+- [ ] Классы следуют паттерну `cn-component-*`
+- [ ] Компонент экспортирован
+
+---
+
+## Когда использовать Base UI примитивы
+
+Используйте примитивы из `@base-ui/react` когда нужно:
+
+- **Accessibility** — фокус, клавиатурная навигация
+- **Состояния** — open/closed, checked/unchecked
+- **Анимации** — enter/exit transitions
+- **Порталы** — рендер вне DOM дерева
+
+Примеры:
+- Dialog, Popover → `@base-ui/react/dialog`
+- Checkbox, Switch → `@base-ui/react/checkbox`
+- Select, Combobox → `@base-ui/react/select`
+
+Для простых компонентов (Card, Badge, ChatMessage) примитивы не нужны — достаточно обычных div/span.

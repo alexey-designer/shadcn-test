@@ -1,0 +1,561 @@
+---
+title: Создание своей дизайн-системы
+description: Пошаговое руководство по кастомизации через Registry без изменения базовых компонентов
+---
+
+# Создание своей дизайн-системы через Registry
+
+Да, ты можешь полностью кастомизировать дизайн-систему через Registry, не трогая оригинальные компоненты shadcn. Вот пошаговый алгоритм.
+
+---
+
+## Границы Registry: что можно и нельзя менять
+
+Главное правило: **не трогай файлы, которые обновляются командой `npx shadcn@latest add`**.
+
+### Нельзя менять (ядро Registry)
+
+| Папка | Почему |
+|-------|--------|
+| `registry/new-york-v4/ui/*.tsx` | Базовые компоненты shadcn — при обновлении перезапишутся |
+| `registry/bases/base/ui/*.tsx` | То же самое |
+| `registry/bases/radix/ui/*.tsx` | То же самое |
+| `registry/styles/style-vega.css` | Оригинальные стили (лучше не трогать) |
+| `registry/styles/style-nova.css` | Оригинальные стили (лучше не трогать) |
+
+### Можно менять (твой слой)
+
+| Файл | Что делаешь |
+|------|-------------|
+| `app/globals.css` | Свои токены, импорты стилей — это **твой** файл проекта |
+| `app/layout.tsx` | Подключение стилей через `className` |
+| `registry/styles/style-mybrand.css` | **Новые** файлы стилей для своего бренда |
+| `components/ui/*.tsx` | Свои компоненты |
+| `components/icons/*.tsx` | Свои иконки |
+| `tailwind.config.ts` | Расширение конфига Tailwind |
+
+### Визуальная схема
+
+```
+registry/
+├── new-york-v4/ui/
+│   ├── button.tsx        ❌ НЕ МЕНЯТЬ
+│   ├── card.tsx          ❌ НЕ МЕНЯТЬ
+│   └── ...
+├── bases/base/ui/        ❌ НЕ МЕНЯТЬ
+└── styles/
+    ├── style-vega.css    ⚠️  Лучше не трогать
+    └── style-mybrand.css ✅ ТВОЙ ФАЙЛ (создаёшь сам)
+
+app/
+├── globals.css           ✅ МОЖНО МЕНЯТЬ (твой файл)
+└── layout.tsx            ✅ МОЖНО МЕНЯТЬ
+
+components/
+├── ui/                   ✅ ТВОИ КОМПОНЕНТЫ
+└── icons/                ✅ ТВОИ ИКОНКИ
+```
+
+> **Почему `globals.css` можно менять?**
+> Это файл твоего проекта, а не часть registry. Он не перезаписывается при обновлении shadcn.
+
+---
+
+## Что мы будем делать
+
+| Задача | Файл |
+|--------|------|
+| Свои стили компонентов | `registry/styles/style-mybrand.css` |
+| Семантические токены | `app/globals.css` |
+| Свои иконки | `components/icons/index.tsx` |
+| Свои компоненты | `components/ui/my-component.tsx` |
+
+---
+
+## Шаг 1: Создание своего файла стилей
+
+### 1.1 Создай файл стилей
+
+Создай новый CSS-файл для своего бренда:
+
+```
+registry/styles/style-mybrand.css
+```
+
+### 1.2 Структура файла
+
+```css
+/* registry/styles/style-mybrand.css */
+
+.style-mybrand {
+  /* ================================
+     MARK: Button
+     ================================ */
+  .cn-button {
+    @apply rounded-full font-semibold tracking-wide;
+  }
+
+  .cn-button-variant-default {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .cn-button-variant-outline {
+    @apply border-2 border-primary text-primary;
+  }
+
+  /* ================================
+     MARK: Card
+     ================================ */
+  .cn-card {
+    @apply rounded-3xl border-0 shadow-xl;
+  }
+
+  /* ================================
+     MARK: Input
+     ================================ */
+  .cn-input {
+    @apply rounded-xl border-2 focus:border-primary;
+  }
+}
+```
+
+### 1.3 Как это работает
+
+Все компоненты shadcn используют CSS-классы с префиксом `cn-`:
+
+| Компонент | Базовый класс | Классы вариантов |
+|-----------|---------------|------------------|
+| Button | `.cn-button` | `.cn-button-variant-default`, `.cn-button-variant-outline` |
+| Card | `.cn-card` | `.cn-card-header`, `.cn-card-content` |
+| Input | `.cn-input` | — |
+| Badge | `.cn-badge` | `.cn-badge-variant-default`, `.cn-badge-variant-secondary` |
+
+Ты переопределяешь только внешний вид, не трогая логику компонентов.
+
+### 1.4 Подключение стилей
+
+В `app/globals.css` добавь импорт:
+
+```css
+@import "../registry/styles/style-mybrand.css";
+```
+
+И примени класс к корневому элементу:
+
+```tsx
+// app/layout.tsx
+<body className="style-mybrand">
+```
+
+---
+
+## Шаг 2: Добавление семантических токенов
+
+### 2.1 Что такое семантические токены
+
+Вместо абстрактных цветов (`primary`, `secondary`) — понятные названия:
+
+```
+text-brand-primary      → Основной цвет бренда
+text-brand-secondary    → Вторичный цвет бренда
+bg-surface-elevated     → Приподнятая поверхность
+border-subtle           → Неяркая граница
+```
+
+### 2.2 Добавление токенов в Tailwind
+
+Отредактируй `app/globals.css`:
+
+```css
+@theme inline {
+  /* Существующие токены shadcn */
+  --color-background: oklch(var(--background));
+  --color-foreground: oklch(var(--foreground));
+  --color-primary: oklch(var(--primary));
+  /* ... */
+
+  /* ================================
+     ТВОИ СЕМАНТИЧЕСКИЕ ТОКЕНЫ
+     ================================ */
+
+  /* Бренд */
+  --color-brand-primary: oklch(0.65 0.24 145);
+  --color-brand-secondary: oklch(0.55 0.18 200);
+  --color-brand-accent: oklch(0.75 0.15 60);
+
+  /* Поверхности */
+  --color-surface-default: oklch(var(--background));
+  --color-surface-elevated: oklch(0.98 0 0);
+  --color-surface-sunken: oklch(0.96 0 0);
+
+  /* Текст */
+  --color-text-primary: oklch(var(--foreground));
+  --color-text-secondary: oklch(0.55 0 0);
+  --color-text-tertiary: oklch(0.70 0 0);
+  --color-text-on-brand: oklch(0.99 0 0);
+
+  /* Границы */
+  --color-border-default: oklch(var(--border));
+  --color-border-subtle: oklch(0.92 0 0);
+  --color-border-strong: oklch(0.80 0 0);
+}
+```
+
+### 2.3 Использование токенов
+
+Теперь можно использовать в коде:
+
+```tsx
+{/* Текст */}
+<p className="text-brand-primary">Основной цвет бренда</p>
+<p className="text-text-secondary">Вторичный текст</p>
+
+{/* Фоны */}
+<div className="bg-surface-elevated">Карточка</div>
+
+{/* Границы */}
+<div className="border border-subtle">Блок</div>
+```
+
+### 2.4 Тёмная тема
+
+Добавь переменные для тёмной темы:
+
+```css
+@layer base {
+  :root {
+    --brand-primary: 0.65 0.24 145;
+    --brand-secondary: 0.55 0.18 200;
+    --surface-elevated: 0.98 0 0;
+  }
+
+  .dark {
+    --brand-primary: 0.75 0.20 145;
+    --brand-secondary: 0.65 0.15 200;
+    --surface-elevated: 0.20 0 0;
+  }
+}
+
+@theme inline {
+  --color-brand-primary: oklch(var(--brand-primary));
+  --color-brand-secondary: oklch(var(--brand-secondary));
+  --color-surface-elevated: oklch(var(--surface-elevated));
+}
+```
+
+---
+
+## Шаг 3: Добавление своих иконок
+
+### 3.1 Создай файл иконок
+
+```
+components/icons/index.tsx
+```
+
+### 3.2 Структура файла
+
+```tsx
+// components/icons/index.tsx
+
+import * as React from "react"
+
+// Тип для всех иконок
+export interface IconProps extends React.SVGProps<SVGSVGElement> {
+  size?: number
+}
+
+// Базовый компонент иконки
+function Icon({ size = 24, className, children, ...props }: IconProps & { children: React.ReactNode }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      {children}
+    </svg>
+  )
+}
+
+// ================================
+// ТВОИ ИКОНКИ
+// ================================
+
+export function BrandLogo({ size, className, ...props }: IconProps) {
+  return (
+    <Icon size={size} className={className} {...props}>
+      {/* SVG path твоего лого */}
+      <circle cx="12" cy="12" r="10" />
+      <path d="M8 12h8" />
+    </Icon>
+  )
+}
+
+export function CustomArrow({ size, className, ...props }: IconProps) {
+  return (
+    <Icon size={size} className={className} {...props}>
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </Icon>
+  )
+}
+
+export function CustomCheck({ size, className, ...props }: IconProps) {
+  return (
+    <Icon size={size} className={className} {...props}>
+      <path d="M20 6L9 17l-5-5" />
+    </Icon>
+  )
+}
+```
+
+### 3.3 Использование иконок
+
+```tsx
+import { BrandLogo, CustomArrow } from "@/components/icons"
+
+<Button>
+  <CustomArrow className="mr-2 size-4" />
+  Далее
+</Button>
+
+<div className="flex items-center gap-2">
+  <BrandLogo size={32} />
+  <span>My Brand</span>
+</div>
+```
+
+### 3.4 Переопределение иконок shadcn
+
+Если хочешь заменить иконки в существующих компонентах, создай обёртку:
+
+```tsx
+// components/icons/overrides.tsx
+
+import { CustomCheck } from "./index"
+
+// Замена Lucide Check на свою иконку
+export { CustomCheck as Check }
+export { CustomArrow as ArrowRight }
+```
+
+Используй алиасы в импортах:
+
+```tsx
+// Было
+import { Check } from "lucide-react"
+
+// Стало
+import { Check } from "@/components/icons/overrides"
+```
+
+---
+
+## Шаг 4: Создание своих компонентов
+
+### 4.1 Где создавать компоненты
+
+```
+components/ui/               ← Твои компоненты (рекомендуется)
+```
+
+> **Важно:** Не создавай свои компоненты в `registry/new-york-v4/ui/` — эта папка зарезервирована для базовых компонентов shadcn и может быть перезаписана при обновлении.
+
+### 4.2 Пример: компонент Status Badge
+
+Создай файл:
+
+```
+components/ui/status-badge.tsx
+```
+
+```tsx
+// components/ui/status-badge.tsx
+
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
+
+const statusBadgeVariants = cva(
+  // Базовые стили
+  "cn-status-badge inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+  {
+    variants: {
+      status: {
+        online: "cn-status-badge-online",
+        offline: "cn-status-badge-offline",
+        busy: "cn-status-badge-busy",
+        away: "cn-status-badge-away",
+      },
+    },
+    defaultVariants: {
+      status: "offline",
+    },
+  }
+)
+
+export interface StatusBadgeProps
+  extends React.HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof statusBadgeVariants> {
+  pulse?: boolean
+}
+
+function StatusBadge({
+  className,
+  status,
+  pulse = false,
+  children,
+  ...props
+}: StatusBadgeProps) {
+  return (
+    <span
+      data-slot="status-badge"
+      data-status={status}
+      className={cn(statusBadgeVariants({ status, className }))}
+      {...props}
+    >
+      <span
+        data-slot="status-indicator"
+        className={cn(
+          "cn-status-indicator size-2 rounded-full",
+          pulse && "animate-pulse"
+        )}
+      />
+      {children}
+    </span>
+  )
+}
+
+export { StatusBadge, statusBadgeVariants }
+```
+
+### 4.3 Стили для компонента
+
+Добавь в свой файл стилей:
+
+```css
+/* registry/styles/style-mybrand.css */
+
+.style-mybrand {
+  /* ... другие стили ... */
+
+  /* ================================
+     MARK: Status Badge
+     ================================ */
+  .cn-status-badge {
+    @apply border;
+  }
+
+  .cn-status-badge-online {
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+  }
+
+  .cn-status-badge-online .cn-status-indicator {
+    @apply bg-emerald-500;
+  }
+
+  .cn-status-badge-offline {
+    @apply bg-gray-50 text-gray-600 border-gray-200;
+  }
+
+  .cn-status-badge-offline .cn-status-indicator {
+    @apply bg-gray-400;
+  }
+
+  .cn-status-badge-busy {
+    @apply bg-red-50 text-red-700 border-red-200;
+  }
+
+  .cn-status-badge-busy .cn-status-indicator {
+    @apply bg-red-500;
+  }
+
+  .cn-status-badge-away {
+    @apply bg-amber-50 text-amber-700 border-amber-200;
+  }
+
+  .cn-status-badge-away .cn-status-indicator {
+    @apply bg-amber-500;
+  }
+}
+```
+
+### 4.4 Использование
+
+```tsx
+import { StatusBadge } from "@/components/ui/status-badge"
+
+<StatusBadge status="online" pulse>В сети</StatusBadge>
+<StatusBadge status="busy">Занят</StatusBadge>
+<StatusBadge status="away">Отошёл</StatusBadge>
+<StatusBadge status="offline">Не в сети</StatusBadge>
+```
+
+---
+
+## Итоговая структура проекта
+
+```
+my-project/
+├── app/
+│   ├── globals.css           ✅ Твои токены
+│   └── layout.tsx            ✅ className="style-mybrand"
+├── components/
+│   ├── icons/
+│   │   └── index.tsx         ✅ Твои иконки
+│   └── ui/
+│       └── status-badge.tsx  ✅ Твои компоненты
+├── registry/
+│   ├── new-york-v4/
+│   │   └── ui/               ❌ НЕ ТРОГАТЬ
+│   ├── bases/                ❌ НЕ ТРОГАТЬ
+│   └── styles/
+│       ├── style-vega.css    ⚠️  Оригинальный (не трогать)
+│       └── style-mybrand.css ✅ ТВОЙ стиль
+└── ...
+```
+
+---
+
+## Чеклист
+
+### Что сделать
+
+- [ ] Создать файл стилей `registry/styles/style-mybrand.css`
+- [ ] Добавить семантические токены в `app/globals.css`
+- [ ] Создать папку с иконками `components/icons/`
+- [ ] Новые компоненты создавать в `components/ui/`
+
+### Чего НЕ делать
+
+- [ ] Не менять файлы в `registry/new-york-v4/ui/`
+- [ ] Не менять файлы в `registry/bases/`
+- [ ] Не редактировать оригинальные стили `style-vega.css`, `style-nova.css`
+
+---
+
+## Преимущества этого подхода
+
+| Что | Как сохраняется |
+|-----|-----------------|
+| **Обновления shadcn** | Обновляй базовые компоненты без потери своих стилей |
+| **Разделение** | Логика (shadcn) отделена от внешнего вида (твои стили) |
+| **Переиспользование** | Один файл стилей работает со всеми компонентами |
+| **Тёмная тема** | Автоматически работает через CSS-переменные |
+
+---
+
+## Что дальше?
+
+- [Registry vs Fork](../getting-started/registry) — почему Registry лучше форка
+- [Создание нового компонента](./new-component) — детальный гайд по созданию компонентов
+- [Семантические переменные](./semantic-variables) — подробнее о CSS-переменных
