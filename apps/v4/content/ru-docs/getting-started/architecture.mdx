@@ -1,0 +1,386 @@
+---
+title: Архитектура shadcn v4
+description: Детальный разбор архитектуры Registry — bases, styles, themes и их взаимосвязь
+---
+
+# Архитектура shadcn v4
+
+В версии 4 shadcn/ui полностью переработал архитектуру. Теперь это модульная система, где логика компонентов отделена от их внешнего вида.
+
+---
+
+## Обзор архитектуры
+
+```
+registry/
+├── bases/                 # Headless компоненты (логика)
+│   ├── base/             # Base UI от MUI
+│   └── radix/            # Radix UI
+├── styles/               # CSS темы (внешний вид)
+│   ├── style-nova.css
+│   ├── style-vega.css
+│   └── ...
+├── new-york-v4/          # Legacy: inline стили
+└── config.ts             # Конфигурация системы
+```
+
+### Ключевая идея
+
+> **Логика** (как работает) отделена от **стилей** (как выглядит).
+
+Это позволяет:
+- Менять внешний вид без изменения кода компонентов
+- Обновлять компоненты без потери кастомизации
+- Создавать несколько тем для одних компонентов
+
+---
+
+## Слои архитектуры
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Слой 5: ИКОНКИ                                         │
+│  Lucide, Hugeicons, Phosphor...                         │
+├─────────────────────────────────────────────────────────┤
+│  Слой 4: ШРИФТ                                          │
+│  Inter, Figtree, JetBrains Mono...                      │
+├─────────────────────────────────────────────────────────┤
+│  Слой 3: ТЕМА (цвета)                                   │
+│  Neutral, Rose, Blue, Amber...                          │
+├─────────────────────────────────────────────────────────┤
+│  Слой 2: СТИЛЬ (CSS)                                    │
+│  Nova, Vega, Maia, Lyra, Mira                           │
+├─────────────────────────────────────────────────────────┤
+│  Слой 1: БАЗА (headless)                                │
+│  Base UI или Radix UI                                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+Каждый слой можно менять независимо от других.
+
+---
+
+## Папка `bases/` — Headless компоненты
+
+### Что такое headless компоненты?
+
+**Headless** = компоненты без стилей. Они содержат только:
+- Логику работы (открытие/закрытие, фокус, клавиатурная навигация)
+- Доступность (ARIA атрибуты, роли)
+- Состояния (hover, focus, disabled)
+
+### Доступные базы
+
+| База | Библиотека | Описание |
+|------|------------|----------|
+| `bases/base/` | Base UI (MUI) | Современный headless от команды Material UI |
+| `bases/radix/` | Radix UI | Проверенная библиотека от Vercel |
+
+### Сравнение Base UI и Radix UI
+
+#### Base UI (`bases/base/`)
+
+```tsx
+// Использует ButtonPrimitive из @base-ui/react
+import { Button as ButtonPrimitive } from "@base-ui/react/button"
+
+function Button({ className, variant, size, ...props }) {
+  return (
+    <ButtonPrimitive
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+```
+
+**Особенности:**
+- Более новая библиотека
+- Активно развивается командой MUI
+- Меньше boilerplate кода
+- Встроенная доступность
+
+#### Radix UI (`bases/radix/`)
+
+```tsx
+// Использует Slot для паттерна asChild
+import { Slot } from "radix-ui"
+
+function Button({ className, variant, size, asChild = false, ...props }) {
+  const Comp = asChild ? Slot.Root : "button"
+
+  return (
+    <Comp
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  )
+}
+```
+
+**Особенности:**
+- Проверенная временем библиотека
+- Паттерн `asChild` для полиморфных компонентов
+- Широкое комьюнити
+- Больше примеров и документации
+
+### Какую базу выбрать?
+
+| Критерий | Base UI | Radix UI |
+|----------|---------|----------|
+| **Новые проекты** | ✅ Рекомендуется | Хороший выбор |
+| **Миграция с Radix** | — | ✅ Проще |
+| **Паттерн asChild** | Нет | ✅ Есть |
+| **Размер бандла** | Меньше | Больше |
+| **Зрелость** | Новая | Зрелая |
+
+---
+
+## Папка `styles/` — CSS темы
+
+### Что это?
+
+CSS файлы, которые определяют **внешний вид** всех компонентов. Стили привязаны к классам с префиксом `cn-`:
+
+```css
+/* styles/style-nova.css */
+
+.style-nova {
+  /* Кнопка */
+  .cn-button {
+    @apply rounded-lg border border-transparent text-sm font-medium;
+  }
+
+  .cn-button-variant-default {
+    @apply bg-primary text-primary-foreground hover:bg-primary/80;
+  }
+
+  .cn-button-size-default {
+    @apply h-8 gap-1.5 px-2.5;
+  }
+
+  /* Карточка */
+  .cn-card {
+    @apply rounded-xl ring-1 ring-foreground/10;
+  }
+}
+```
+
+### Доступные стили
+
+| Стиль | Описание | Характеристики |
+|-------|----------|----------------|
+| **Nova** | Компактный | Меньше отступов, строгие линии |
+| **Vega** | Классический | Стандартный shadcn вид |
+| **Maia** | Мягкий | Большие скругления, просторный |
+| **Lyra** | Квадратный | Острые углы, моноширинный шрифт |
+| **Mira** | Плотный | Максимальная компактность |
+
+### Как работает связь компонент → стиль
+
+```
+┌──────────────────┐     ┌──────────────────┐
+│  button.tsx      │     │  style-nova.css  │
+│                  │     │                  │
+│  className=      │────▶│  .cn-button {    │
+│  "cn-button      │     │    @apply ...    │
+│   cn-button-     │     │  }               │
+│   variant-       │     │                  │
+│   default"       │     │  .cn-button-     │
+│                  │     │  variant-default │
+└──────────────────┘     └──────────────────┘
+```
+
+Компонент добавляет CSS-класс → Стиль определяет его внешний вид.
+
+---
+
+## Папка `new-york-v4/` — Legacy подход
+
+### Что это?
+
+Старая версия компонентов, где стили прописаны **inline** в самих файлах:
+
+```tsx
+// new-york-v4/ui/button.tsx
+
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium...",
+  {
+    variants: {
+      variant: {
+        // Стили прямо в коде!
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-white hover:bg-destructive/90",
+        outline: "border bg-background shadow-xs hover:bg-accent",
+      },
+    },
+  }
+)
+```
+
+### Почему это legacy?
+
+| Проблема | Описание |
+|----------|----------|
+| **Смешение** | Логика и стили в одном файле |
+| **Сложность кастомизации** | Чтобы изменить стиль — редактируй компонент |
+| **Конфликты при обновлении** | Твои изменения перезапишутся |
+| **Нет тем** | Один стиль на все случаи |
+
+### Когда использовать new-york-v4?
+
+- Для быстрого прототипа
+- Если не планируешь кастомизацию
+- Для изучения структуры компонентов
+
+---
+
+## Как всё связывается
+
+### config.ts — центр конфигурации
+
+```ts
+// registry/config.ts
+
+export const designSystemConfigSchema = z.object({
+  base: z.enum(["base", "radix"]),           // Выбор headless библиотеки
+  style: z.enum(["nova", "vega", "maia"...]), // Выбор CSS темы
+  theme: z.enum(["default", "rose", "blue"...]), // Выбор цветовой палитры
+  font: z.enum(["inter", "figtree"...]),     // Выбор шрифта
+  iconLibrary: z.enum(["lucide", "phosphor"...]), // Выбор иконок
+})
+```
+
+### Пример полной конфигурации
+
+```ts
+const myDesignSystem = {
+  base: "base",        // Base UI компоненты
+  style: "nova",       // Компактный стиль
+  theme: "neutral",    // Нейтральные цвета
+  font: "inter",       // Шрифт Inter
+  iconLibrary: "lucide", // Иконки Lucide
+}
+```
+
+### Как применяется конфигурация
+
+```tsx
+// app/layout.tsx
+
+<body className="style-nova theme-neutral font-inter">
+  {children}
+</body>
+```
+
+---
+
+## Структура файлов компонента
+
+### В bases/ (headless)
+
+```
+bases/base/ui/button.tsx
+├── Импорты
+│   ├── ButtonPrimitive из @base-ui/react
+│   ├── cva из class-variance-authority
+│   └── cn из lib/utils
+├── buttonVariants (CVA)
+│   ├── Базовые классы: "cn-button inline-flex..."
+│   ├── Варианты: "cn-button-variant-default"
+│   └── Размеры: "cn-button-size-default"
+└── Button компонент
+    └── Рендерит ButtonPrimitive с className
+```
+
+### В styles/ (CSS)
+
+```
+styles/style-nova.css
+├── .style-nova { ... }
+│   ├── .cn-button { базовые стили }
+│   ├── .cn-button-variant-default { цвет default }
+│   ├── .cn-button-variant-outline { цвет outline }
+│   ├── .cn-button-size-default { размер default }
+│   ├── .cn-button-size-sm { размер sm }
+│   └── ...
+```
+
+---
+
+## Создание своей темы
+
+### Шаг 1: Создай CSS файл
+
+```css
+/* styles/style-mybrand.css */
+
+.style-mybrand {
+  .cn-button {
+    @apply rounded-full font-bold tracking-wide;
+  }
+
+  .cn-button-variant-default {
+    @apply bg-brand-primary text-white hover:bg-brand-primary/90;
+  }
+
+  .cn-card {
+    @apply rounded-3xl shadow-xl border-0;
+  }
+}
+```
+
+### Шаг 2: Подключи в layout
+
+```tsx
+// app/layout.tsx
+import "@/styles/style-mybrand.css"
+
+<body className="style-mybrand">
+```
+
+### Шаг 3: Готово!
+
+Все компоненты автоматически получат твои стили.
+
+---
+
+## Сравнение подходов
+
+| Критерий | bases/ + styles/ | new-york-v4 |
+|----------|------------------|-------------|
+| **Разделение** | Логика ≠ Стили | Всё вместе |
+| **Кастомизация** | CSS файл | Редактировать компонент |
+| **Обновления** | Безопасные | Конфликты |
+| **Темы** | Несколько | Одна |
+| **Сложность** | Выше | Ниже |
+
+---
+
+## Рекомендации
+
+### Для новых проектов
+
+1. Используй `bases/base/` — современный подход
+2. Выбери стиль из `styles/` как основу
+3. Создай свой CSS файл для кастомизации
+
+### Для изучения
+
+1. Начни с `new-york-v4/` — проще понять структуру
+2. Потом изучи разделение в `bases/` + `styles/`
+
+### Для продакшена
+
+1. Используй разделённую архитектуру
+2. Не редактируй файлы в `bases/` и оригинальные `styles/`
+3. Создавай свои файлы стилей
+
+---
+
+## Что дальше?
+
+- [Структура файлов](./structure) — детальный список всех файлов
+- [Registry vs Fork](./registry) — почему Registry лучше
+- [Создание дизайн-системы](/ru-docs/customization/custom-design-system) — практическое руководство
