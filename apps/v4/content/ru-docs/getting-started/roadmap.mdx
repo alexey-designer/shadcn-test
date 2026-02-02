@@ -1,0 +1,387 @@
+---
+title: Roadmap развития
+description: Путь от Registry к публичной дизайн-системе
+---
+
+# Roadmap: от Registry к публичной библиотеке
+
+Пошаговый план развития дизайн-системы — от прототипа до продакшн-библиотеки.
+
+---
+
+## Обзор этапов
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Registry  │ →  │  npm-пакет  │ →  │ Fork + CLI  │
+│   (альфа)   │    │   (бета)    │    │  (релиз)    │
+└─────────────┘    └─────────────┘    └─────────────┘
+    1-2 мес           2-4 мес           4+ мес
+```
+
+| Этап | Цель | Пользователи |
+|------|------|--------------|
+| Registry | Валидация идей | 1-3 команды (ранние adopters) |
+| npm-пакет | Удобная дистрибуция | 5-15 команд |
+| Fork + CLI | Масштабирование | 15+ команд |
+
+---
+
+## Этап 1: Registry (альфа)
+
+### Цели
+
+- Быстро запустить первую версию
+- Собрать фидбек от реальных пользователей
+- Понять, какие компоненты нужны
+
+### Структура проекта
+
+```
+my-design-system/
+├── app/
+│   ├── globals.css           ← Твои токены
+│   └── layout.tsx
+├── components/
+│   └── ui/                   ← Переопределённые компоненты
+├── registry/
+│   ├── new-york-v4/ui/       ← Оригинальный shadcn
+│   └── styles/
+│       └── style-mybrand.css ← Твои стили
+└── content/
+    └── docs/                 ← Документация
+```
+
+### Как пользователи подключают
+
+**Вариант 1: Копирование файлов**
+```bash
+# Пользователь копирует нужные файлы в свой проект
+cp -r my-design-system/components/ui/* ./components/ui/
+cp my-design-system/app/globals.css ./app/
+```
+
+**Вариант 2: Git submodule**
+```bash
+git submodule add https://github.com/your-org/my-design-system
+```
+
+**Вариант 3: Monorepo**
+```
+company-monorepo/
+├── packages/
+│   └── design-system/       ← Твоя дизайн-система
+└── apps/
+    ├── app-1/               ← Использует design-system
+    └── app-2/
+```
+
+### Чеклист этапа
+
+- [ ] Определены основные токены (цвета, отступы, типографика)
+- [ ] Созданы стили для базовых компонентов
+- [ ] Написана документация для 10-15 основных компонентов
+- [ ] 2-3 команды используют в реальных проектах
+- [ ] Собран фидбек и составлен список улучшений
+
+### Когда переходить дальше
+
+Переходи на npm-пакет, когда:
+- Более 3 команд хотят использовать
+- Устал от ручного копирования файлов
+- Нужно версионирование
+
+---
+
+## Этап 2: npm-пакет (бета)
+
+### Цели
+
+- Удобное подключение через npm/yarn/pnpm
+- Версионирование и changelog
+- Автоматические обновления
+
+### Структура проекта
+
+```
+my-design-system/
+├── packages/
+│   ├── ui/                      ← @mybrand/ui
+│   │   ├── src/
+│   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   └── index.ts
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   ├── tokens/                  ← @mybrand/tokens
+│   │   ├── src/
+│   │   │   ├── globals.css
+│   │   │   └── index.ts
+│   │   └── package.json
+│   └── icons/                   ← @mybrand/icons
+│       ├── src/
+│       │   └── index.tsx
+│       └── package.json
+├── apps/
+│   └── docs/                    ← Документация
+├── package.json
+└── turbo.json                   ← Turborepo конфиг
+```
+
+### Настройка монорепозитория
+
+**package.json (корень)**
+```json
+{
+  "name": "my-design-system",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "publish-packages": "turbo run build && changeset publish"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "@changesets/cli": "^2.27.0"
+  }
+}
+```
+
+**packages/ui/package.json**
+```json
+{
+  "name": "@mybrand/ui",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./button": {
+      "import": "./dist/button.js",
+      "types": "./dist/button.d.ts"
+    }
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0"
+  }
+}
+```
+
+### Как пользователи подключают
+
+```bash
+npm install @mybrand/ui @mybrand/tokens
+```
+
+```tsx
+// app/layout.tsx
+import "@mybrand/tokens/globals.css"
+
+// components/my-component.tsx
+import { Button, Card } from "@mybrand/ui"
+```
+
+### Версионирование с Changesets
+
+```bash
+# При изменениях
+npx changeset
+
+# Публикация
+npx changeset version
+npx changeset publish
+```
+
+### Чеклист этапа
+
+- [ ] Настроен монорепозиторий (Turborepo/Nx)
+- [ ] Пакеты публикуются в npm (или приватный registry)
+- [ ] Настроен CI/CD для автопубликации
+- [ ] Ведётся CHANGELOG
+- [ ] Есть semantic versioning (1.0.0, 1.1.0, 2.0.0)
+- [ ] 5+ команд используют через npm
+
+### Когда переходить дальше
+
+Переходи на Fork + CLI, когда:
+- Пользователи хотят кастомизировать компоненты
+- Нужна поддержка разных фреймворков
+- Хочешь CLI как у shadcn
+
+---
+
+## Этап 3: Fork + CLI (релиз)
+
+### Цели
+
+- CLI для добавления компонентов
+- Возможность кастомизации под проект
+- Поддержка Next.js, Vite, Remix и др.
+
+### Структура проекта
+
+```
+my-design-system/
+├── packages/
+│   ├── ui/                      ← Компоненты
+│   ├── tokens/                  ← Токены
+│   ├── icons/                   ← Иконки
+│   └── cli/                     ← @mybrand/cli
+│       ├── src/
+│       │   ├── commands/
+│       │   │   ├── init.ts
+│       │   │   └── add.ts
+│       │   └── index.ts
+│       └── package.json
+├── apps/
+│   └── docs/
+├── registry/                    ← JSON-описания компонентов
+│   ├── ui/
+│   │   ├── button.json
+│   │   └── card.json
+│   └── registry.json
+└── templates/                   ← Шаблоны для разных фреймворков
+    ├── next/
+    ├── vite/
+    └── remix/
+```
+
+### Как работает CLI
+
+```bash
+# Инициализация в новом проекте
+npx @mybrand/cli init
+
+# Добавление компонентов
+npx @mybrand/cli add button card dialog
+
+# Обновление компонента
+npx @mybrand/cli update button
+```
+
+### registry/ui/button.json
+
+```json
+{
+  "name": "button",
+  "type": "registry:ui",
+  "dependencies": ["class-variance-authority"],
+  "registryDependencies": ["utils"],
+  "files": [
+    {
+      "path": "ui/button.tsx",
+      "type": "registry:ui"
+    }
+  ]
+}
+```
+
+### Чеклист этапа
+
+- [ ] CLI опубликован в npm
+- [ ] Команда `init` настраивает проект
+- [ ] Команда `add` добавляет компоненты
+- [ ] Поддержка Next.js, Vite, Remix
+- [ ] Автогенерация документации из кода
+- [ ] 15+ команд активно используют
+
+---
+
+## Что переносится между этапами
+
+| Артефакт | Registry → npm | npm → Fork |
+|----------|----------------|------------|
+| Компоненты (.tsx) | ✅ | ✅ |
+| Стили (.css) | ✅ | ✅ |
+| Токены | ✅ | ✅ |
+| Документация | ✅ | ✅ |
+| Тесты | ✅ | ✅ |
+
+**Ничего не выбрасывается** — каждый этап строится на предыдущем.
+
+---
+
+## Инструменты для каждого этапа
+
+### Registry (альфа)
+
+| Инструмент | Назначение |
+|------------|------------|
+| Git | Версионирование |
+| Fumadocs/Nextra | Документация |
+| Storybook | Превью компонентов |
+
+### npm-пакет (бета)
+
+| Инструмент | Назначение |
+|------------|------------|
+| Turborepo | Монорепозиторий |
+| Changesets | Версионирование |
+| tsup | Сборка пакетов |
+| GitHub Actions | CI/CD |
+
+### Fork + CLI (релиз)
+
+| Инструмент | Назначение |
+|------------|------------|
+| Commander.js | CLI framework |
+| Prompts | Интерактивные вопросы |
+| Zod | Валидация конфигов |
+
+---
+
+## Примерный таймлайн
+
+```
+Месяц 1-2:    Registry
+              ├── Базовые токены
+              ├── 15 основных компонентов
+              └── Документация
+
+Месяц 3-4:    npm-пакет
+              ├── Монорепо настройка
+              ├── CI/CD
+              └── Первый релиз в npm
+
+Месяц 5-6:    Fork + CLI
+              ├── CLI разработка
+              ├── Шаблоны фреймворков
+              └── Публичный релиз
+```
+
+---
+
+## Советы
+
+### Не торопись с Fork
+
+Fork требует значительных ресурсов на поддержку. Начни с Registry, собери фидбек, и только потом масштабируй.
+
+### Документируй с первого дня
+
+Документация — это часть продукта. Пользователи не будут использовать то, что не понимают.
+
+### Собирай метрики
+
+- Сколько команд используют?
+- Какие компоненты популярны?
+- Какие проблемы возникают?
+
+Это поможет приоритизировать работу.
+
+---
+
+## Что дальше?
+
+- [Создание дизайн-системы](../customization/custom-design-system) — практическое руководство
+- [Registry vs Fork](./registry) — детальное сравнение подходов
